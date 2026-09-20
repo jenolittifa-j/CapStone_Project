@@ -1189,19 +1189,39 @@ function saveCurrentUser(user){
     );
 }
 
+
 function logout(){
 
+    // Remove logged-in user
     localStorage.removeItem(
         "flycompare_current_user"
     );
 
+    // Clear login session
+    sessionStorage.removeItem(
+        "flycompare_login_email"
+    );
+
+    // Close profile menu
+    const profileMenu =
+        document.getElementById("profileMenu");
+
+    if(profileMenu){
+        profileMenu.classList.remove("show");
+    }
+
+    // Show logout message
     showNotification(
         "You have been logged out successfully."
     );
 
-    navigate("#/");
-}
+    // Go to Login page
+    setTimeout(() => {
 
+        navigate("#/login");
+
+    }, 500);
+}
 
 /* =====================================================
    NOTIFICATION
@@ -2959,11 +2979,17 @@ function loginOtpPage(){
 
     `;
 }
+
+
+
+
+
 async function verifyLoginOTP(){
 
     const otp =
-        document.getElementById("loginOtpInput")
-        .value.trim();
+        document.getElementById(
+            "loginOtpInput"
+        ).value.trim();
 
     const email =
         sessionStorage.getItem(
@@ -2977,42 +3003,29 @@ async function verifyLoginOTP(){
 
     error.style.display = "none";
 
-
-    /* ===============================
-       CHECK OTP INPUT
-    =============================== */
-
     if(!otp){
 
         error.innerText =
             "Please enter the OTP.";
 
-        error.style.display = "block";
+        error.style.display =
+            "block";
 
         return;
     }
-
-
-    /* ===============================
-       CHECK LOGIN SESSION
-    =============================== */
 
     if(!email){
 
         error.innerText =
             "Login session expired. Please login again.";
 
-        error.style.display = "block";
+        error.style.display =
+            "block";
 
         return;
     }
 
-
     try{
-
-        /* ===============================
-           VERIFY OTP WITH BACKEND
-        =============================== */
 
         const response = await fetch(
             "http://localhost:8081/api/users/verify-otp?email="
@@ -3024,105 +3037,71 @@ async function verifyLoginOTP(){
             }
         );
 
-
         const result =
             (await response.text()).trim();
-
 
         console.log(
             "OTP VERIFY RESULT:",
             result
         );
 
-
-        /* ===============================
-           LOGIN SUCCESS
-        =============================== */
-
         if(result === "LOGIN_SUCCESS"){
 
-            /*
-             * Get user from frontend storage
-             */
-            const users = getUsers();
+            const profileResponse =
+                await fetch(
+                    "http://localhost:8081/api/users/profile?email="
+                    + encodeURIComponent(email)
+                );
 
+            if(!profileResponse.ok){
 
-            /*
-             * Find the logged-in user
-             */
-            const user = users.find(
-                u =>
-                    u.email &&
-                    u.email.trim().toLowerCase()
-                    ===
-                    email.trim().toLowerCase()
+                throw new Error(
+                    "Unable to get user profile."
+                );
+            }
+
+            const user =
+                await profileResponse.json();
+
+            console.log(
+                "USER PROFILE:",
+                user
             );
 
+            saveCurrentUser({
 
-            /*
-             * Save user information
-             */
-            if(user){
+                userId:
+                    user.userId,
 
-                saveCurrentUser(user);
+                firstName:
+                    user.firstName,
 
-            }
-            else{
+                lastName:
+                    user.lastName,
 
-                /*
-                 * If frontend user list does not
-                 * contain the user, still create
-                 * a logged-in session.
-                 */
+                email:
+                    user.email,
 
-                saveCurrentUser({
+                phone:
+                    user.phone
 
-                    firstName: "User",
+            });
 
-                    lastName: "",
-
-                    email: email
-
-                });
-
-            }
-
-
-            /*
-             * Remove temporary login email
-             */
             sessionStorage.removeItem(
                 "flycompare_login_email"
             );
 
-
-            /*
-             * Show success message
-             */
             showNotification(
                 "Login successful!"
             );
 
-
-            /*
-             * Browser notification
-             */
             browserNotification(
                 "Welcome back to FlyCompare!"
             );
 
-
-            /*
-             * Go to home page
-             */
             navigate("#/");
 
         }
-
-
-        /* ===============================
-           INVALID OTP
-        =============================== */
 
         else{
 
@@ -3136,28 +3115,20 @@ async function verifyLoginOTP(){
 
     }
 
-
-    /* ===============================
-       BACKEND CONNECTION ERROR
-    =============================== */
-
-    catch(error){
+    catch(err){
 
         console.error(
             "OTP VERIFICATION ERROR:",
-            error
+            err
         );
-
 
         const loginOtpError =
             document.getElementById(
                 "loginOtpError"
             );
 
-
         loginOtpError.innerText =
             "Cannot connect to backend. Please start the Spring Boot server.";
-
 
         loginOtpError.style.display =
             "block";
@@ -3165,7 +3136,8 @@ async function verifyLoginOTP(){
     }
 
 }
-
+   
+        
     
 
   
