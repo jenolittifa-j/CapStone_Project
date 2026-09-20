@@ -119,6 +119,79 @@ a{
     align-items:center;
 }
 
+/* PROFILE */
+
+.profile-container{
+    position:relative;
+}
+
+.profile-btn{
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    border:2px solid var(--primary);
+    background:#eef2ff;
+    color:var(--primary);
+    font-size:18px;
+    font-weight:700;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.profile-btn:hover{
+    background:#e0e7ff;
+}
+
+.profile-menu{
+    position:absolute;
+    top:55px;
+    right:0;
+    width:220px;
+    background:white;
+    border-radius:12px;
+    box-shadow:var(--shadow-lg);
+    padding:15px;
+    z-index:2000;
+    display:none;
+}
+
+.profile-menu.show{
+    display:block;
+}
+
+.profile-name{
+    font-weight:700;
+    margin-bottom:4px;
+}
+
+.profile-email{
+    color:var(--muted);
+    font-size:13px;
+    margin-bottom:12px;
+    word-break:break-word;
+}
+
+.profile-menu button{
+    width:100%;
+    border:0;
+    background:white;
+    padding:10px;
+    text-align:left;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:600;
+}
+
+.profile-menu button:hover{
+    background:#f1f5f9;
+}
+
+.profile-menu .logout-btn{
+    color:var(--danger);
+}
+
 .btn{
     border:0;
     padding:11px 18px;
@@ -1194,10 +1267,9 @@ async function browserNotification(message){
 /* =====================================================
    NAVBAR
 ===================================================== */
-
 function navbar(){
 
-    const user=getCurrentUser();
+    const user = getCurrentUser();
 
     return `
     <nav class="navbar">
@@ -1237,16 +1309,46 @@ function navbar(){
                     user
                     ?
                     `
-                    <span>
-                        Hi, ${user.firstName}
-                    </span>
+                    <div class="profile-container">
 
-                    <button
-                        class="btn btn-danger"
-                        onclick="logout()"
-                    >
-                        Logout
-                    </button>
+                        <button
+                            class="profile-btn"
+                            onclick="toggleProfileMenu()"
+                            title="Profile"
+                        >
+                            👤
+                        </button>
+
+                        <div
+                            id="profileMenu"
+                            class="profile-menu"
+                        >
+
+                            <div class="profile-name">
+                                ${user.firstName || "User"}
+                                ${user.lastName || ""}
+                            </div>
+
+                            <div class="profile-email">
+                                ${user.email || ""}
+                            </div>
+
+                            <button
+                                onclick="navigate('#/my-trips'); toggleProfileMenu();"
+                            >
+                                ✈️ My Trips
+                            </button>
+
+                            <button
+                                onclick="logout()"
+                                class="logout-btn"
+                            >
+                                🚪 Logout
+                            </button>
+
+                        </div>
+
+                    </div>
                     `
                     :
                     `
@@ -1280,6 +1382,7 @@ function navbar(){
     </nav>
     `;
 }
+             
 
 function mobileMenu(){
 
@@ -1345,7 +1448,18 @@ function mobileMenu(){
         `
     );
 }
+/* =====================================================
+   PROFILE MENU
+===================================================== */
 
+function toggleProfileMenu(){
+
+    const menu = document.getElementById("profileMenu");
+
+    if(menu){
+        menu.classList.toggle("show");
+    }
+}
 
 /* =====================================================
    FOOTER
@@ -2520,7 +2634,7 @@ function registerPage(){
 
     `;
 }
-    async function registerUser(event){
+    async function registerUser(event) {
 
     event.preventDefault();
 
@@ -2531,16 +2645,13 @@ function registerPage(){
         document.getElementById("regLastName").value.trim();
 
     const email =
-        document.getElementById("regEmail").value.trim().toLowerCase();
+        document.getElementById("regEmail").value.trim();
 
     const phone =
         document.getElementById("regPhone").value.trim();
 
     const password =
         document.getElementById("regPassword").value;
-
-    const confirmPassword =
-        document.getElementById("regConfirmPassword").value;
 
     const error =
         document.getElementById("registerError");
@@ -2551,31 +2662,10 @@ function registerPage(){
     error.style.display = "none";
     success.style.display = "none";
 
-
-    if(password !== confirmPassword){
-
-        error.innerText =
-            "Passwords do not match.";
-
-        error.style.display = "block";
-
-        return;
-    }
-
-
-    const user = {
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        phone: phone,
-        password: password
-    };
-
-
-    try{
+    try {
 
         const response = await fetch(
-            "http://localhost:8080/api/users/register",
+            "http://localhost:8081/api/users/register",
             {
                 method: "POST",
 
@@ -2583,75 +2673,63 @@ function registerPage(){
                     "Content-Type": "application/json"
                 },
 
-                body: JSON.stringify(user)
+                body: JSON.stringify({
+
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: email,
+                    phone: phone,
+                    password: password
+
+                })
             }
         );
 
+        if (!response.ok) {
 
-        if(!response.ok){
+            const message =
+                await response.text();
 
-            const errorData = await response.json();
-
-            error.innerText =
-                errorData.message ||
-                "Registration failed.";
-
-            error.style.display = "block";
-
-            return;
+            throw new Error(
+                message || "Registration failed"
+            );
         }
 
+        const savedUser =
+            await response.json();
 
-        const savedUser = await response.json();
-
-
-        sessionStorage.setItem(
-            "flycompare_otp",
-            Math.floor(
-                100000 + Math.random() * 900000
-            ).toString()
-        );
-
-
-        sessionStorage.setItem(
-            "flycompare_pending_user",
-            JSON.stringify(savedUser)
-        );
-
-
-        success.innerHTML =
-            "Registration successful! OTP sent to your phone.";
+        // Registration successful
+        success.innerText =
+            "Registration Successfully Completed!";
 
         success.style.display = "block";
 
-
         showNotification(
-            "Registration successful."
+            "Registration Successfully Completed!"
         );
 
-
-        browserNotification(
-            "Your FlyCompare verification OTP is " +
-            sessionStorage.getItem("flycompare_otp")
-        );
-
-
+        // Go to Login page
         setTimeout(() => {
-            navigate("#/verify-otp");
-        }, 1000);
 
-    }catch(error){
+            navigate("#/login");
 
-        console.error(error);
+        }, 1500);
 
-        document.getElementById("registerError").innerText =
-            "Cannot connect to Spring Boot backend.";
+    } catch (err) {
 
-        document.getElementById("registerError").style.display =
-            "block";
+        console.error(err);
+
+        error.innerText =
+            err.message ||
+            "Registration failed. Please try again.";
+
+        error.style.display = "block";
     }
 }
-    
+     
+
+
+       
 
 
            
@@ -2660,7 +2738,7 @@ function registerPage(){
    OTP PAGE
 ===================================================== */
 
-function otpPage(){
+ function otpPage(){
 
     return `
 
@@ -2695,10 +2773,8 @@ function otpPage(){
 
             <div class="demo-otp">
 
-                Demo OTP:
-                <strong>
-                    ${sessionStorage.getItem("flycompare_otp") || "------"}
-                </strong>
+                OTP has been sent to your registered
+                email or phone number.
 
             </div>
 
@@ -2729,62 +2805,58 @@ function otpPage(){
     `;
 }
 
+
 function verifyOTP(){
 
-    const entered=
+    const entered =
         document.getElementById(
             "otpInput"
         ).value.trim();
 
-    const actual=
+    const actual =
         sessionStorage.getItem(
             "flycompare_otp"
         );
 
-    const error=
+    const error =
         document.getElementById(
             "otpError"
         );
 
+    if(entered !== actual){
 
-    if(entered!==actual){
-
-        error.innerText=
+        error.innerText =
             "Invalid OTP. Please try again.";
 
-        error.style.display="block";
+        error.style.display = "block";
 
         return;
     }
 
-
-    const user=
+    const user =
         JSON.parse(
             sessionStorage.getItem(
                 "flycompare_pending_user"
             )
         );
 
+    user.phoneVerified = true;
 
-    user.phoneVerified=true;
+    const users = getUsers();
 
-    const users=getUsers();
-
-    const index=
+    const index =
         users.findIndex(
-            u=>u.email===user.email
+            u => u.email === user.email
         );
 
-    if(index!==-1){
+    if(index !== -1){
 
-        users[index]=user;
+        users[index] = user;
 
         saveUsers(users);
     }
 
-
     saveCurrentUser(user);
-
 
     sessionStorage.removeItem(
         "flycompare_otp"
@@ -2794,28 +2866,26 @@ function verifyOTP(){
         "flycompare_pending_user"
     );
 
-
     showNotification(
         "Phone number verified successfully!"
     );
-
 
     browserNotification(
         "Your FlyCompare account is verified."
     );
 
-
-    setTimeout(()=>{
+    setTimeout(() => {
         navigate("#/");
-    },1000);
+    }, 1000);
 }
+
 
 function resendOTP(){
 
-    const otp=
+    const otp =
         Math.floor(
-            100000+
-            Math.random()*900000
+            100000 +
+            Math.random() * 900000
         ).toString();
 
     sessionStorage.setItem(
@@ -2828,13 +2898,282 @@ function resendOTP(){
     );
 
     browserNotification(
-        "Your new FlyCompare OTP is "+otp
+        "Your new FlyCompare OTP is " + otp
     );
 
     router();
 }
+function loginOtpPage(){
+
+    return `
+
+    ${navbar()}
+
+    <main class="form-page">
+
+        <div class="form-card otp-box">
+
+            <h2>
+                Verify Login OTP
+            </h2>
+
+            <p class="form-subtitle">
+                Enter the OTP sent to your email.
+            </p>
+
+            <div
+                id="loginOtpError"
+                class="error"
+            ></div>
+
+            <input
+                id="loginOtpInput"
+                type="text"
+                maxlength="6"
+                placeholder="000000"
+            >
+
+            <br>
+
+            <button
+                class="btn btn-primary full-btn"
+                onclick="verifyLoginOTP()"
+            >
+                Verify OTP
+            </button>
+
+            <br><br>
+
+            <button
+                class="btn btn-outline full-btn"
+                onclick="resendLoginOTP()"
+            >
+                Resend OTP
+            </button>
+
+        </div>
+
+    </main>
+
+    ${footer()}
+
+    `;
+}
+async function verifyLoginOTP(){
+
+    const otp =
+        document.getElementById("loginOtpInput")
+        .value.trim();
+
+    const email =
+        sessionStorage.getItem(
+            "flycompare_login_email"
+        );
+
+    const error =
+        document.getElementById(
+            "loginOtpError"
+        );
+
+    error.style.display = "none";
 
 
+    /* ===============================
+       CHECK OTP INPUT
+    =============================== */
+
+    if(!otp){
+
+        error.innerText =
+            "Please enter the OTP.";
+
+        error.style.display = "block";
+
+        return;
+    }
+
+
+    /* ===============================
+       CHECK LOGIN SESSION
+    =============================== */
+
+    if(!email){
+
+        error.innerText =
+            "Login session expired. Please login again.";
+
+        error.style.display = "block";
+
+        return;
+    }
+
+
+    try{
+
+        /* ===============================
+           VERIFY OTP WITH BACKEND
+        =============================== */
+
+        const response = await fetch(
+            "http://localhost:8081/api/users/verify-otp?email="
+            + encodeURIComponent(email)
+            + "&otp="
+            + encodeURIComponent(otp),
+            {
+                method: "POST"
+            }
+        );
+
+
+        const result =
+            (await response.text()).trim();
+
+
+        console.log(
+            "OTP VERIFY RESULT:",
+            result
+        );
+
+
+        /* ===============================
+           LOGIN SUCCESS
+        =============================== */
+
+        if(result === "LOGIN_SUCCESS"){
+
+            /*
+             * Get user from frontend storage
+             */
+            const users = getUsers();
+
+
+            /*
+             * Find the logged-in user
+             */
+            const user = users.find(
+                u =>
+                    u.email &&
+                    u.email.trim().toLowerCase()
+                    ===
+                    email.trim().toLowerCase()
+            );
+
+
+            /*
+             * Save user information
+             */
+            if(user){
+
+                saveCurrentUser(user);
+
+            }
+            else{
+
+                /*
+                 * If frontend user list does not
+                 * contain the user, still create
+                 * a logged-in session.
+                 */
+
+                saveCurrentUser({
+
+                    firstName: "User",
+
+                    lastName: "",
+
+                    email: email
+
+                });
+
+            }
+
+
+            /*
+             * Remove temporary login email
+             */
+            sessionStorage.removeItem(
+                "flycompare_login_email"
+            );
+
+
+            /*
+             * Show success message
+             */
+            showNotification(
+                "Login successful!"
+            );
+
+
+            /*
+             * Browser notification
+             */
+            browserNotification(
+                "Welcome back to FlyCompare!"
+            );
+
+
+            /*
+             * Go to home page
+             */
+            navigate("#/");
+
+        }
+
+
+        /* ===============================
+           INVALID OTP
+        =============================== */
+
+        else{
+
+            error.innerText =
+                "Invalid OTP. Please enter the latest OTP.";
+
+            error.style.display =
+                "block";
+
+        }
+
+    }
+
+
+    /* ===============================
+       BACKEND CONNECTION ERROR
+    =============================== */
+
+    catch(error){
+
+        console.error(
+            "OTP VERIFICATION ERROR:",
+            error
+        );
+
+
+        const loginOtpError =
+            document.getElementById(
+                "loginOtpError"
+            );
+
+
+        loginOtpError.innerText =
+            "Cannot connect to backend. Please start the Spring Boot server.";
+
+
+        loginOtpError.style.display =
+            "block";
+
+    }
+
+}
+
+    
+
+  
+
+    
+    
+
+           
 /* =====================================================
    LOGIN PAGE
 ===================================================== */
@@ -2954,99 +3293,128 @@ function loginPage(){
     `;
 }
 
-function loginUser(event){
+
+
+async function loginUser(event){
 
     event.preventDefault();
 
-    const email=
-        document.getElementById(
-            "loginEmail"
-        ).value.trim().toLowerCase();
+    const email =
+        document.getElementById("loginEmail")
+        .value.trim().toLowerCase();
 
-    const password=
-        document.getElementById(
-            "loginPassword"
-        ).value;
+    const password =
+        document.getElementById("loginPassword")
+        .value;
 
-    const error=
-        document.getElementById(
-            "loginError"
+    const error =
+        document.getElementById("loginError");
+
+    const success =
+        document.getElementById("loginSuccess");
+
+    const loginButton =
+        event.target.querySelector(
+            'button[type="submit"]'
         );
 
-    const success=
-        document.getElementById(
-            "loginSuccess"
-        );
+    error.style.display = "none";
+    success.style.display = "none";
 
-    error.style.display="none";
-    success.style.display="none";
-
-    const users=getUsers();
-
-    const user=
-        users.find(
-            u=>
-            u.email===email &&
-            u.password===password
-        );
-
-    if(!user){
-
-        error.innerText=
-            "Invalid email or password.";
-
-        error.style.display="block";
-
+    // Prevent multiple clicks
+    if(loginButton.disabled){
         return;
     }
 
-    saveCurrentUser(user);
+    // Disable Login button immediately
+    loginButton.disabled = true;
+    loginButton.innerText = "Sending OTP...";
 
-    success.innerText=
-        "Login successful! Welcome back.";
+    try {
 
-    success.style.display="block";
+        const response = await fetch(
+            "http://localhost:8081/api/users/login",
+            {
+                method: "POST",
 
-    showNotification(
-        "Login successful. Welcome "+user.firstName+"!"
-    );
+                headers: {
+                    "Content-Type": "application/json"
+                },
 
-    browserNotification(
-        "Welcome back to FlyCompare!"
-    );
-
-    /*
-        If the user selected a flight before login,
-        continue directly to passenger details.
-    */
-    const pendingFlight=
-        sessionStorage.getItem(
-            "flycompare_pending_flight"
+                body: JSON.stringify({
+                    email: email,
+                    password: password
+                })
+            }
         );
 
-    setTimeout(()=>{
+        const result =
+            (await response.text()).trim();
 
-        if(pendingFlight){
+        if(result === "OTP_SENT"){
 
-            sessionStorage.removeItem(
-                "flycompare_pending_flight"
+            sessionStorage.setItem(
+                "flycompare_login_email",
+                email
             );
 
-            navigate(
-                "#/book/"+
-                encodeURIComponent(pendingFlight)
+            success.innerText =
+                "OTP sent to your email.";
+
+            success.style.display = "block";
+
+            showNotification(
+                "OTP sent to your email."
             );
 
-        }else{
+            browserNotification(
+                "FlyCompare login OTP sent."
+            );
 
-            navigate("#/");
+            setTimeout(() => {
+
+                navigate("#/login-otp");
+
+            }, 1000);
 
         }
+        else {
 
-    },1000);
+            error.innerText =
+                "Invalid email or password.";
+
+            error.style.display = "block";
+
+            loginButton.disabled = false;
+            loginButton.innerText = "Login";
+        }
+
+    }
+    catch(error){
+
+        console.error(
+            "LOGIN ERROR:",
+            error
+        );
+
+        const loginError =
+            document.getElementById(
+                "loginError"
+            );
+
+        loginError.innerText =
+            "Cannot connect to backend. Please start the Spring Boot server.";
+
+        loginError.style.display = "block";
+
+        loginButton.disabled = false;
+        loginButton.innerText = "Login";
+    }
 }
 
 
+   
+            
 /* =====================================================
    BOOKING
 ===================================================== */
@@ -4681,19 +5049,26 @@ function router(){
 
     }
 
-    else if(path==="/verify-otp"){
+    else if(path==="/verify-otp"){ 
 
-        document.getElementById("app")
-            .innerHTML=otpPage();
+    document.getElementById("app") 
+        .innerHTML=otpPage(); 
 
-    }
+}
 
-    else if(path==="/explore"){
+else if(path==="/login-otp"){
 
-        document.getElementById("app")
-            .innerHTML=explorePage();
+    document.getElementById("app")
+        .innerHTML=loginOtpPage();
 
-    }
+}
+
+else if(path==="/explore"){ 
+
+    document.getElementById("app") 
+        .innerHTML=explorePage(); 
+
+}
 
     else if(path==="/deals"){
 
