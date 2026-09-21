@@ -2654,7 +2654,8 @@ function registerPage(){
 
     `;
 }
-    async function registerUser(event) {
+    
+async function registerUser(event) {
 
     event.preventDefault();
 
@@ -2679,7 +2680,10 @@ function registerPage(){
     const success =
         document.getElementById("registerSuccess");
 
+    error.innerText = "";
     error.style.display = "none";
+
+    success.innerText = "";
     success.style.display = "none";
 
     try {
@@ -2694,63 +2698,84 @@ function registerPage(){
                 },
 
                 body: JSON.stringify({
-
                     firstName: firstName,
                     lastName: lastName,
                     email: email,
                     phone: phone,
                     password: password
-
                 })
             }
         );
 
-        if (!response.ok) {
+        const result =
+            await response.text();
 
-            const message =
-                await response.text();
+        console.log("Registration Response:", result);
 
-            throw new Error(
-                message || "Registration failed"
+        if (result === "REGISTRATION_SUCCESS") {
+
+            error.innerText = "";
+            error.style.display = "none";
+
+            success.innerText =
+                "Registration Successfully Completed!";
+
+            success.style.display =
+                "block";
+
+            showNotification(
+                "Registration Successfully Completed!"
             );
+
+            setTimeout(() => {
+
+                navigate("#/login");
+
+            }, 1500);
+
+            return;
         }
 
-        const savedUser =
-            await response.json();
+        if (result === "EMAIL_EXISTS") {
 
-        // Registration successful
-        success.innerText =
-            "Registration Successfully Completed!";
+            success.innerText = "";
+            success.style.display = "none";
 
-        success.style.display = "block";
+            error.innerText =
+                "Email already exists. Please use another email.";
 
-        showNotification(
-            "Registration Successfully Completed!"
-        );
+            error.style.display =
+                "block";
 
-        // Go to Login page
-        setTimeout(() => {
+            return;
+        }
 
-            navigate("#/login");
+        error.innerText =
+            "Registration failed. Please try again.";
 
-        }, 1500);
+        error.style.display =
+            "block";
 
-    } catch (err) {
+    }
+    catch (err) {
 
         console.error(err);
+
+        success.innerText = "";
+        success.style.display = "none";
 
         error.innerText =
             err.message ||
             "Registration failed. Please try again.";
 
-        error.style.display = "block";
+        error.style.display =
+            "block";
     }
 }
-     
-
-
+   
+  
        
-
+    
 
            
 
